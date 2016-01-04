@@ -17,6 +17,9 @@
  */
 package org.wso2.carbon.ml.core.impl;
 
+import java.io.InputStream;
+import java.util.List;
+
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,9 +39,6 @@ import org.wso2.carbon.ml.core.utils.MLUtils;
 import org.wso2.carbon.ml.core.utils.MLUtils.DataTypeFactory;
 import org.wso2.carbon.ml.database.DatabaseService;
 import org.wso2.carbon.ml.database.exceptions.DatabaseHandlerException;
-
-import java.io.InputStream;
-import java.util.*;
 
 /**
  * This object is responsible for reading a data-set using a {@link MLInputAdapter}, extracting meta-data, persist in ML
@@ -184,7 +184,6 @@ public class MLDatasetProcessor {
         CSVFormat dataFormat = DataTypeFactory.getCSVFormat(dataset.getDataType());
         String[] features = MLUtils.getFeatures(firstLine, dataFormat);
         int featureSize = features.length;
-        // SamplePoints samplePoints = datasetProcessor.getSamplePoints();
         // persist dataset
         persistDataset(dataset);
 

@@ -1,12 +1,12 @@
 /*
  * Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -62,7 +62,7 @@ public class AnalysisApiV10 extends MLRestAPI {
 
     /**
      * HTTP Options method implementation for analysis API.
-     * 
+     *
      * @return
      */
     @OPTIONS
@@ -96,7 +96,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                     tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -110,7 +110,7 @@ public class AnalysisApiV10 extends MLRestAPI {
     @Produces("application/json")
     @Consumes("application/json")
     public Response addCustomizedFeatures(@PathParam("analysisId") long analysisId,
-            List<MLCustomizedFeature> customizedFeatures) {
+                                          List<MLCustomizedFeature> customizedFeatures) {
         PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         int tenantId = carbonContext.getTenantId();
         String userName = carbonContext.getUsername();
@@ -119,13 +119,12 @@ public class AnalysisApiV10 extends MLRestAPI {
             return Response.ok().build();
         } catch (MLAnalysisHandlerException e) {
             String msg = MLUtils
-                    .getErrorMsg(
-                            String.format(
-                                    "Error occurred while adding customized features for the analysis [id] %s of tenant [id] %s and [user] %s .",
-                                    analysisId, tenantId, userName), e);
+                    .getErrorMsg(String.format(
+                            "Error occurred while adding customized features for the analysis [id] %s of tenant [id] %s and [user] %s .",
+                            analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -139,7 +138,7 @@ public class AnalysisApiV10 extends MLRestAPI {
     @Produces("application/json")
     @Consumes("application/json")
     public Response addDefaultsIntoCustomizedFeatures(@PathParam("analysisId") long analysisId,
-            MLCustomizedFeature customizedValues) {
+                                                      MLCustomizedFeature customizedValues) {
         PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         int tenantId = carbonContext.getTenantId();
         String userName = carbonContext.getUsername();
@@ -157,7 +156,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -173,14 +172,14 @@ public class AnalysisApiV10 extends MLRestAPI {
     @Produces("application/json")
     @Consumes("application/json")
     public Response getSummarizedFeatures(@PathParam("analysisId") long analysisId, @QueryParam("limit") int limit,
-            @QueryParam("offset") int offset) {
+                                          @QueryParam("offset") int offset) {
         PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         int tenantId = carbonContext.getTenantId();
         String userName = carbonContext.getUsername();
         try {
 
             List<FeatureSummary> features = mlAnalysisHandler.getSummarizedFeatures(tenantId, userName, analysisId,
-                    limit, offset);
+                                                                                    limit, offset);
             return Response.ok(features).build();
         } catch (MLAnalysisHandlerException e) {
             String msg = MLUtils
@@ -190,7 +189,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -211,8 +210,9 @@ public class AnalysisApiV10 extends MLRestAPI {
         int tenantId = carbonContext.getTenantId();
         String userName = carbonContext.getUsername();
         try {
-            List<MLCustomizedFeature> customizedFeatures = mlAnalysisHandler.getCustomizedFeatures(tenantId, userName, analysisId,
-                    limit, offset);
+            List<MLCustomizedFeature> customizedFeatures = mlAnalysisHandler.getCustomizedFeatures(tenantId, userName,
+                                                                                                   analysisId, limit,
+                                                                                                   offset);
             return Response.ok(customizedFeatures).build();
         } catch (MLAnalysisHandlerException e) {
             String msg = MLUtils
@@ -222,7 +222,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -246,7 +246,7 @@ public class AnalysisApiV10 extends MLRestAPI {
             MLAnalysisConfigsBean mlAnalysisConfigsBean = new MLAnalysisConfigsBean();
             mlAnalysisConfigsBean.setId(analysisId);
             mlAnalysisConfigsBean.setCustomizedFeatures(mlAnalysisHandler.getCustomizedFeatures(tenantId, userName, analysisId,
-                    limit, offset));
+                                                                                                limit, offset));
             mlAnalysisConfigsBean.setAlgorithmName(mlAnalysisHandler.getAlgorithmName(analysisId));
             mlAnalysisConfigsBean.setResponseVariable(mlAnalysisHandler.getResponseVariable(analysisId));
             mlAnalysisConfigsBean.setTrainDataFraction(mlAnalysisHandler.getTrainDataFraction(analysisId));
@@ -260,7 +260,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -274,7 +274,7 @@ public class AnalysisApiV10 extends MLRestAPI {
     @Path("/{analysisId}/filteredFeatures")
     @Produces("application/json")
     public Response getfilteredFeatures(@PathParam("analysisId") String analysisId,
-            @QueryParam("featureType") String featureType) {
+                                        @QueryParam("featureType") String featureType) {
         PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         int tenantId = carbonContext.getTenantId();
         String userName = carbonContext.getUsername();
@@ -290,7 +290,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -318,7 +318,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -346,7 +346,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -374,7 +374,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -402,7 +402,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -430,7 +430,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -445,7 +445,7 @@ public class AnalysisApiV10 extends MLRestAPI {
     @Produces("application/json")
     @Consumes("application/json")
     public Response getSummaryStatistics(@PathParam("analysisId") long analysisId,
-            @QueryParam("feature") String featureName) {
+                                         @QueryParam("feature") String featureName) {
         PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         int tenantId = carbonContext.getTenantId();
         String userName = carbonContext.getUsername();
@@ -453,7 +453,7 @@ public class AnalysisApiV10 extends MLRestAPI {
 
             if (featureName == null) {
                 return Response.status(Response.Status.NOT_FOUND)
-                        .entity(new MLErrorBean("feature query param was not set.")).build();
+                               .entity(new MLErrorBean("feature query param was not set.")).build();
             }
 
             String summary = mlAnalysisHandler.getSummaryStats(tenantId, userName, analysisId, featureName);
@@ -466,7 +466,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     featureName, analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -480,7 +480,7 @@ public class AnalysisApiV10 extends MLRestAPI {
     @Produces("application/json")
     @Consumes("application/json")
     public Response addModelConfiguration(@PathParam("analysisId") long analysisId,
-            List<MLModelConfiguration> modelConfigs) {
+                                          List<MLModelConfiguration> modelConfigs) {
         PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         int tenantId = carbonContext.getTenantId();
         String userName = carbonContext.getUsername();
@@ -495,7 +495,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -510,7 +510,7 @@ public class AnalysisApiV10 extends MLRestAPI {
     @Produces("application/json")
     @Consumes("application/json")
     public Response addHyperParameters(@PathParam("analysisId") long analysisId,
-            List<MLHyperParameter> hyperParameters, @QueryParam("algorithmName") String algorithmName) {
+                                       List<MLHyperParameter> hyperParameters, @QueryParam("algorithmName") String algorithmName) {
         PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         int tenantId = carbonContext.getTenantId();
         String userName = carbonContext.getUsername();
@@ -525,7 +525,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -540,7 +540,7 @@ public class AnalysisApiV10 extends MLRestAPI {
     @Produces("application/json")
     @Consumes("application/json")
     public Response getHyperParameters(@PathParam("analysisId") long analysisId,
-            @QueryParam("algorithmName") String algorithmName) {
+                                       @QueryParam("algorithmName") String algorithmName) {
         PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         int tenantId = carbonContext.getTenantId();
         String userName = carbonContext.getUsername();
@@ -555,7 +555,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     algorithmName, analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -582,7 +582,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -605,7 +605,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                     userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -630,7 +630,7 @@ public class AnalysisApiV10 extends MLRestAPI {
                     analysisId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -647,14 +647,17 @@ public class AnalysisApiV10 extends MLRestAPI {
         String userName = carbonContext.getUsername();
         try {
             mlAnalysisHandler.deleteAnalysis(tenantId, userName, analysisId);
+            auditLog.info(String.format("User [name] %s of tenant [id] %s deleted an analysis [id] %s ", userName,
+                    tenantId, analysisId));
             return Response.ok().build();
         } catch (MLAnalysisHandlerException e) {
             String msg = MLUtils.getErrorMsg(String.format(
                     "Error occurred while deleting an analysis [id] %s of tenant [id] %s and [user] %s .", analysisId,
                     tenantId, userName), e);
             logger.error(msg, e);
+            auditLog.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 }

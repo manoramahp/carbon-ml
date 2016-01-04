@@ -42,11 +42,14 @@ public class MLIOFactory {
         Class<?> c;
         if (configuration != null) {
             String className = configuration.getProperty(type);
+            if (className == null) {
+                return new FileInputAdapter();
+            }
             try {
                 c = Class.forName(className);
                 MLInputAdapter inputAdapter = (MLInputAdapter) c.newInstance();
                 return inputAdapter;
-            } catch (Exception e) {
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
                 log.warn(String
                         .format("Failed to load/instantiate the class: %s . Hence, the default implementation %s will be used.",
                                 className, FileInputAdapter.class.getName()));
@@ -59,11 +62,14 @@ public class MLIOFactory {
         Class<?> c;
         if (configuration != null) {
             String className = configuration.getProperty(type);
+            if (className == null) {
+                return new FileOutputAdapter();
+            }
             try {
                 c = Class.forName(className);
                 MLOutputAdapter outputAdapter = (MLOutputAdapter) c.newInstance();
                 return outputAdapter;
-            } catch (Exception e) {
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
                 log.warn(String
                         .format("Failed to load/instantiate the class: %s . Hence, the default implementation %s will be used.",
                                 className, FileOutputAdapter.class.getName()));
@@ -74,6 +80,11 @@ public class MLIOFactory {
 
     public String getTargetPath(String fileName) {
         String targetDir = MLCoreServiceValueHolder.getInstance().getDatasetStorage().getStorageDirectory();
+
+        if ("hdfs".equals(MLCoreServiceValueHolder.getInstance().getDatasetStorage().getStorageType())) {
+            // return fully qualified hdfs url
+            return MLCoreServiceValueHolder.getInstance().getHdfsUrl() + targetDir + "/" + fileName;
+        }
 
         return targetDir + File.separator + fileName;
 

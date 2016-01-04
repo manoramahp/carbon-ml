@@ -16,17 +16,6 @@
 
 package org.wso2.carbon.ml.siddhi.extension;
 
-import org.wso2.carbon.ml.commons.constants.MLConstants;
-import org.wso2.carbon.ml.commons.domain.Feature;
-import org.wso2.carbon.ml.commons.domain.MLModel;
-import org.wso2.carbon.ml.core.exceptions.MLInputAdapterException;
-import org.wso2.carbon.ml.core.exceptions.MLModelHandlerException;
-import org.wso2.carbon.ml.core.factories.DatasetType;
-import org.wso2.carbon.ml.core.impl.MLIOFactory;
-import org.wso2.carbon.ml.core.impl.Predictor;
-import org.wso2.carbon.ml.core.interfaces.MLInputAdapter;
-import org.wso2.carbon.ml.core.utils.MLCoreServiceValueHolder;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -35,6 +24,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.wso2.carbon.ml.commons.constants.MLConstants;
+import org.wso2.carbon.ml.commons.domain.Feature;
+import org.wso2.carbon.ml.commons.domain.MLModel;
+import org.wso2.carbon.ml.core.exceptions.MLInputAdapterException;
+import org.wso2.carbon.ml.core.exceptions.MLModelHandlerException;
+import org.wso2.carbon.ml.core.factories.DatasetType;
+import org.wso2.carbon.ml.core.h2o.POJOPredictor;
+import org.wso2.carbon.ml.core.impl.MLIOFactory;
+import org.wso2.carbon.ml.core.impl.Predictor;
+import org.wso2.carbon.ml.core.interfaces.MLInputAdapter;
+import org.wso2.carbon.ml.core.utils.MLCoreServiceValueHolder;
 
 public class ModelHandler {
 
@@ -59,7 +60,7 @@ public class ModelHandler {
     }
 
     /**
-     * Retrieve the MLModel from the storage location
+     * Retrieve the MLModel from the storage location.
      * @param modelStorageLocation model storage location (file path or registry path)
      * @return the deserialized MLModel object
      * @throws URISyntaxException
@@ -96,10 +97,11 @@ public class ModelHandler {
     }
 
     /**
-     * Predict the value using the feature values
-     * @param data  feature values array
-     * @return      predicted value
-     * @throws      MLModelHandlerException
+     * Predict the value using the feature values.
+     * @param data          feature values array
+     * @param outputType    data type of the output
+     * @return              predicted value
+     * @throws              MLModelHandlerException
      */
     public Object predict(String[] data, String outputType) throws MLModelHandlerException {
         ArrayList<String[]> list = new ArrayList<String[]>();
@@ -112,7 +114,39 @@ public class ModelHandler {
     }
 
     /**
-     * Cast the given value to the given output type
+     * Predict the value using the feature values.
+     * @param data feature values array
+     * @param percentile percentile value for predictions
+     * @return predicted value
+     * @throws MLModelHandlerException
+     */
+    public Object predict(String[] data, String outputType, double percentile) throws MLModelHandlerException {
+        ArrayList<String[]> list = new ArrayList<String[]>();
+        list.add(data);
+        Predictor predictor = new Predictor(modelId, mlModel, list, percentile, false);
+        List<?> predictions = predictor.predict();
+        String predictionStr = predictions.get(0).toString();
+        Object prediction = castValue(outputType, predictionStr);
+        return prediction;
+    }
+
+    /**
+     * Predict the value using the feature values with POJO predictor.
+     * @param data          feature values array
+     * @param outputType    data type of the output
+     * @param pojoPredictor POJO predictor
+     * @return              predicted value
+     * @throws              MLModelHandlerException
+     */
+    public Object predict(String[] data, String outputType, POJOPredictor pojoPredictor)
+            throws MLModelHandlerException {
+        String predictionStr = pojoPredictor.predict(data).toString();
+        Object prediction = castValue(outputType, predictionStr);
+        return prediction;
+    }
+
+    /**
+     * Cast the given value to the given output type.
      * @param outputType Output data type
      * @param value value to be casted in String
      * @return Value casted to output type object
@@ -145,7 +179,7 @@ public class ModelHandler {
         }
         return featureIndexMap;
     }
-    
+
     /**
      * Get new to old indices list of this model.
      * @return the new to old indices list of the MLModel
@@ -160,5 +194,20 @@ public class ModelHandler {
      */
     public String getResponseVariable() {
         return mlModel.getResponseVariable();
+    }
+
+    /**
+     * Returns the algorithm class - classification, numerical prediction or clustering
+     * @return the algorithm class
+     */
+    public String getAlgorithmClass() {
+        return mlModel.getAlgorithmClass();
+    }
+
+    /**
+     * @return the model
+     */
+    public MLModel getMlModel() {
+        return mlModel;
     }
 }

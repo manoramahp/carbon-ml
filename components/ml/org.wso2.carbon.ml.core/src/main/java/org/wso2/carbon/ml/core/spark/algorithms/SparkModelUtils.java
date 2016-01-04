@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.ml.core.spark.algorithms;
 
+import java.text.DecimalFormat;
+import java.util.*;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.spark.api.java.JavaDoubleRDD;
@@ -35,14 +38,12 @@ import org.wso2.carbon.ml.commons.domain.Feature;
 import org.wso2.carbon.ml.commons.domain.FeatureType;
 import org.wso2.carbon.ml.core.internal.MLModelConfigurationContext;
 import org.wso2.carbon.ml.core.spark.summary.ClassClassificationAndRegressionModelSummary;
-import org.wso2.carbon.ml.core.spark.summary.TestResultDataPoint;
 import org.wso2.carbon.ml.core.spark.summary.PredictedVsActual;
 import org.wso2.carbon.ml.core.spark.summary.ProbabilisticClassificationModelSummary;
+import org.wso2.carbon.ml.core.spark.summary.TestResultDataPoint;
 import org.wso2.carbon.ml.core.utils.MLCoreServiceValueHolder;
-import scala.Tuple2;
 
-import java.text.DecimalFormat;
-import java.util.*;
+import scala.Tuple2;
 
 public class SparkModelUtils {
     private static final Log log = LogFactory.getLog(SparkModelUtils.class);
@@ -359,9 +360,62 @@ public class SparkModelUtils {
             }
 
         } catch (JSONException e) {
-            log.warn("Failed to extract unique values from summary stats: " + statsAsJson, e);
+            log.warn("Failed to extract mean values from summary stats: " + statsAsJson, e);
             return 0.0;
         }
 
     }
+
+    public static double getMin(String statsAsJson) {
+        if (statsAsJson == null) {
+            return 0.0;
+        }
+        try {
+            // new JSONArray(statsAsJson).getJSONObject(0).getJSONArray("values").getJSONArray(0).getString(0)
+            JSONArray array = new JSONArray(statsAsJson);
+            JSONObject jsonObj = array.getJSONObject(0);
+            String min = jsonObj.getString("min");
+            if (min == null) {
+                return 0.0;
+            } else {
+                try {
+                    return Double.parseDouble(min);
+                } catch (NumberFormatException e) {
+                    return 0.0;
+                }
+            }
+
+        } catch (JSONException e) {
+            log.warn("Failed to extract min values from summary stats: " + statsAsJson, e);
+            return 0.0;
+        }
+
+    }
+
+    public static double getMax(String statsAsJson) {
+        if (statsAsJson == null) {
+            return 0.0;
+        }
+        try {
+            // new JSONArray(statsAsJson).getJSONObject(0).getJSONArray("values").getJSONArray(0).getString(0)
+            JSONArray array = new JSONArray(statsAsJson);
+            JSONObject jsonObj = array.getJSONObject(0);
+            String max = jsonObj.getString("max");
+            if (max == null) {
+                return 0.0;
+            } else {
+                try {
+                    return Double.parseDouble(max);
+                } catch (NumberFormatException e) {
+                    return 0.0;
+                }
+            }
+
+        } catch (JSONException e) {
+            log.warn("Failed to extract max values from summary stats: " + statsAsJson, e);
+            return 0.0;
+        }
+
+    }
+    
 }

@@ -30,10 +30,20 @@ public class Workflow implements Serializable {
     private String algorithmName;
     private String algorithmClass;
     private String responseVariable;
+    private String userVariable;
+    private String productVariable;
+    private String ratingVariable;
+    private String observations;
     private double trainDataFraction;
     private List<Feature> features;
     private Map<String, String> hyperParameters;
     private String datasetVersion;
+    private String normalLabels;
+    private boolean normalization;
+    // user defined normal label
+    private String newNormalLabel;
+    // user defined anomaly label
+    private String newAnomalyLabel;
 
     /**
      * @return Returns machine learning workflow ID
@@ -92,6 +102,62 @@ public class Workflow implements Serializable {
     }
 
     /**
+     * @return  Returns user variable
+     */
+    public String getUserVariable() {
+        return userVariable;
+    }
+
+    /**
+     * @param userVariable  Sets user variable
+     */
+    public void setUserVariable(String userVariable) {
+        this.userVariable = userVariable;
+    }
+
+    /**
+     * @return  Returns product variable
+     */
+    public String getProductVariable() {
+        return productVariable;
+    }
+
+    /**
+     * @param productVariable   Sets product variable
+     */
+    public void setProductVariable(String productVariable) {
+        this.productVariable = productVariable;
+    }
+
+    /**
+     * @return  Returns rating variable
+     */
+    public String getRatingVariable() {
+        return ratingVariable;
+    }
+
+    /**
+     * @return  Returns observations
+     */
+    public String getObservations() {
+        return observations;
+    }
+
+    /**
+     * @param observations  Sets observations
+     */
+    public void setObservations(String observations) {
+        this.observations = observations;
+    }
+
+    /**
+     * @param ratingVariable  Sets rating variable
+     */
+    public void setRatingVariable(String ratingVariable) {
+        this.ratingVariable = ratingVariable;
+    }
+
+    /**
      * @return Returns training data fraction
      */
     public double getTrainDataFraction() {
@@ -103,6 +169,62 @@ public class Workflow implements Serializable {
      */
     public void setTrainDataFraction(double trainDataFraction) {
         this.trainDataFraction = trainDataFraction;
+    }
+
+    /**
+     * @return Returns normalization
+     */
+    public boolean getNormalization() {
+        return normalization;
+    }
+
+    /**
+     * @param normalization Sets nomalization option
+     */
+    public void setNormalization(boolean normalization) {
+        this.normalization = normalization;
+    }
+
+    /**
+     * @return Returns normal labels
+     */
+    public String getNormalLabels() {
+        return normalLabels;
+    }
+
+    /**
+     * @param normalLabels Sets normal labels
+     */
+    public void setNormalLabels(String normalLabels) {
+        this.normalLabels = normalLabels;
+    }
+
+    /**
+     * @return new normal labels
+     */
+    public String getNewNormalLabel() {
+        return newNormalLabel;
+    }
+
+    /**
+     * @param newNormalLabel Sets new normal label
+     */
+    public void setNewNormalLabel(String newNormalLabel) {
+        this.newNormalLabel = newNormalLabel;
+    }
+
+    /**
+     * @return new anomaly labels
+     */
+    public String getNewAnomalyLabel() {
+        return newAnomalyLabel;
+    }
+
+    /**
+     * @param newAnomalyLabel Sets new anomaly label
+     */
+    public void setNewAnomalyLabel(String newAnomalyLabel) {
+        this.newAnomalyLabel = newAnomalyLabel;
     }
 
     /**
@@ -164,7 +286,7 @@ public class Workflow implements Serializable {
     public List<Feature> getIncludedFeatures(){
         List<Feature> includedFeatures = new ArrayList<Feature>();
         for (Feature feature : features) {
-            if (feature.isInclude() == true && !responseVariable.equals(feature.getName())) {
+            if (feature.isInclude() == true && (responseVariable == null || !responseVariable.equals(feature.getName()))) {
                 includedFeatures.add(feature);
             }
         }

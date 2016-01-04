@@ -36,20 +36,27 @@ import org.wso2.carbon.analytics.datasource.commons.exception.AnalyticsException
 import org.wso2.carbon.analytics.datasource.commons.exception.AnalyticsTableNotAvailableException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.ml.commons.constants.MLConstants;
-import org.wso2.carbon.ml.commons.domain.*;
+import org.wso2.carbon.ml.commons.domain.Feature;
+import org.wso2.carbon.ml.commons.domain.MLDatasetVersion;
+import org.wso2.carbon.ml.commons.domain.SamplePoints;
+import org.wso2.carbon.ml.commons.domain.Workflow;
+import org.wso2.carbon.ml.commons.domain.config.MLProperty;
+import org.wso2.carbon.ml.core.exceptions.MLMalformedDatasetException;
+import org.wso2.carbon.ml.core.spark.transformations.DiscardedRowsFilter;
 import org.wso2.carbon.ml.core.spark.transformations.HeaderFilter;
 import org.wso2.carbon.ml.core.spark.transformations.LineToTokens;
-import org.wso2.carbon.ml.commons.domain.config.MLProperty;
 import org.wso2.carbon.ml.core.spark.transformations.RowsToLines;
-import org.wso2.carbon.ml.core.exceptions.MLMalformedDatasetException;
 
+/**
+ * Common utility methods used in ML core.
+ */
 public class MLUtils {
 
     /**
      * Generate a random sample of the dataset using Spark.
      */
-    public static SamplePoints getSample(String path, String dataType, int sampleSize, boolean containsHeader,
-            String sourceType, int tenantId) throws MLMalformedDatasetException {
+    public static SamplePoints getSample(String path, String dataType, int sampleSize, boolean containsHeader)
+            throws MLMalformedDatasetException {
 
         JavaSparkContext sparkContext = null;
         try {
@@ -83,7 +90,7 @@ public class MLUtils {
         JavaSparkContext sparkContext = MLCoreServiceValueHolder.getInstance().getSparkContext();
         return sparkContext.textFile(filePath).first();
     }
-    
+
     /**
      * Generate a random sample of the dataset using Spark.
      */
@@ -137,7 +144,7 @@ public class MLUtils {
     }
 
     private static SamplePoints getSamplePoints(int sampleSize, boolean containsHeader, Map<String, Integer> headerMap,
-            List<List<String>> columnData, CSVFormat dataFormat, JavaRDD<String> lines) {
+                                                List<List<String>> columnData, CSVFormat dataFormat, JavaRDD<String> lines) {
         int featureSize;
         int[] missing;
         int[] stringCellCount;
@@ -148,8 +155,9 @@ public class MLUtils {
         featureSize = getFeatureSize(firstLine, dataFormat);
 
         List<Integer> featureIndices = new ArrayList<Integer>();
-        for (int i = 0; i < featureSize; i++)
+        for (int i = 0; i < featureSize; i++) {
             featureIndices.add(i);
+        }
 
         String columnSeparator = String.valueOf(dataFormat.getDelimiter());
         HeaderFilter headerFilter = new HeaderFilter.Builder().header(lines.first()).build();
@@ -281,13 +289,13 @@ public class MLUtils {
 
     /**
      * Retrieve the indices of features where discard row imputaion is applied.
-     * 
+     *
      * @param workflow Machine learning workflow
      * @param imputeOption Impute option
      * @return Returns indices of features where discard row imputaion is applied
      */
     public static List<Integer> getImputeFeatureIndices(Workflow workflow, List<Integer> newToOldIndicesList,
-            String imputeOption) {
+                                                        String imputeOption) {
         List<Integer> imputeFeatureIndices = new ArrayList<Integer>();
         for (Feature feature : workflow.getFeatures()) {
             if (feature.getImputeOption().equals(imputeOption) && feature.isInclude() == true) {
@@ -302,7 +310,7 @@ public class MLUtils {
 
     /**
      * Retrieve the index of a feature in the dataset.
-     * 
+     *
      * @param feature Feature name
      * @param headerRow First row (header) in the data file
      * @param columnSeparator Column separator character
@@ -343,7 +351,7 @@ public class MLUtils {
      * @return A list of indices of features to be included in the model
      */
     public static SortedMap<Integer, String> getIncludedFeaturesAfterReordering(Workflow workflow,
-            List<Integer> newToOldIndicesList, int responseIndex) {
+                                                                                List<Integer> newToOldIndicesList, int responseIndex) {
         SortedMap<Integer, String> inlcudedFeatures = new TreeMap<Integer, String>();
         List<Feature> features = workflow.getFeatures();
         for (Feature feature : features) {
@@ -381,7 +389,7 @@ public class MLUtils {
      * @return Dataset Version Object
      */
     public static MLDatasetVersion getMLDatsetVersion(int tenantId, long datasetId, String userName, String name,
-            String version, String targetPath) {
+                                                      String version, String targetPath) {
         MLDatasetVersion valueSet = new MLDatasetVersion();
         valueSet.setTenantId(tenantId);
         valueSet.setDatasetId(datasetId);
@@ -403,7 +411,7 @@ public class MLUtils {
 
     /**
      * Get {@link Properties} from a list of {@link MLProperty}
-     * 
+     *
      * @param mlProperties list of {@link MLProperty}
      * @return {@link Properties}
      */
@@ -456,11 +464,39 @@ public class MLUtils {
         String[] values = line.split("" + format.getDelimiter());
         return values.length;
     }
-    
+
     public static String[] getFeatures(String line, CSVFormat format) {
         String[] values = line.split("" + format.getDelimiter());
         return values;
     }
+
+
+    /**
+     * Applies the discard filter to a JavaRDD
+     *
+     * @param delimiter Column separator of the dataset
+     * @param headerRow Header row
+     * @param lines JavaRDD which contains the dataset
+     * @param featureIndices Indices of the features to apply filter
+     * @return filtered JavaRDD
+     */
+    public static JavaRDD<String[]> filterRows(String delimiter, String headerRow, JavaRDD<String> lines,
+                                               List<Integer> featureIndices) {
+        String columnSeparator = String.valueOf(delimiter);
+        HeaderFilter headerFilter = new HeaderFilter.Builder().header(headerRow).build();
+        JavaRDD<String> data = lines.filter(headerFilter).cache();
+        Pattern pattern = MLUtils.getPatternFromDelimiter(columnSeparator);
+        LineToTokens lineToTokens = new LineToTokens.Builder().separator(pattern).build();
+        JavaRDD<String[]> tokens = data.map(lineToTokens).cache();
+
+        // get feature indices for discard imputation
+        DiscardedRowsFilter discardedRowsFilter = new DiscardedRowsFilter.Builder().indices(featureIndices).build();
+        // Discard the row if any of the impute indices content have a missing value
+        JavaRDD<String[]> tokensDiscardedRemoved = tokens.filter(discardedRowsFilter).cache();
+
+        return tokensDiscardedRemoved;
+    }
+
 
     /**
      * format an error message.
@@ -473,7 +509,7 @@ public class MLUtils {
     }
 
     /**
-     * Utility method to get key from value of a map
+     * Utility method to get key from value of a map.
      *
      * @param map Map to be searched for a key
      * @param value Value of the key
@@ -488,7 +524,7 @@ public class MLUtils {
     }
 
     /**
-     * Utility method to convert a String array to CSV/TSV row string
+     * Utility method to convert a String array to CSV/TSV row string.
      *
      * @param array String array to be converted
      * @param delimiter Delimiter to be used (comma for CSV tab for TSV)
@@ -502,10 +538,10 @@ public class MLUtils {
         }
         return arrayString.toString();
     }
-    
+
     /**
      * Generates a pattern to represent CSV or TSV format.
-     * 
+     *
      * @param delimiter "," or "\t"
      * @return Pattern
      */

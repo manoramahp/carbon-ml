@@ -17,10 +17,7 @@
  */
 package org.wso2.carbon.ml.core.impl;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,18 +32,23 @@ import org.wso2.carbon.metrics.manager.Level;
 import org.wso2.carbon.metrics.manager.MetricManager;
 import org.wso2.carbon.metrics.manager.Timer;
 import org.wso2.carbon.metrics.manager.Timer.Context;
+import org.wso2.carbon.ml.commons.constants.MLConstants.ANOMALY_DETECTION_ALGORITHM;
+import org.wso2.carbon.ml.commons.constants.MLConstants.DEEPLEARNING_ALGORITHM;
 import org.wso2.carbon.ml.commons.constants.MLConstants.SUPERVISED_ALGORITHM;
 import org.wso2.carbon.ml.commons.constants.MLConstants.UNSUPERVISED_ALGORITHM;
+import org.wso2.carbon.ml.commons.domain.Feature;
 import org.wso2.carbon.ml.commons.domain.MLModel;
 import org.wso2.carbon.ml.core.exceptions.AlgorithmNameException;
+import org.wso2.carbon.ml.core.exceptions.MLModelBuilderException;
 import org.wso2.carbon.ml.core.exceptions.MLModelHandlerException;
 import org.wso2.carbon.ml.core.factories.AlgorithmType;
-import org.wso2.carbon.ml.core.spark.models.MLDecisionTreeModel;
-import org.wso2.carbon.ml.core.spark.models.MLGeneralizedLinearModel;
-import org.wso2.carbon.ml.core.spark.models.MLClassificationModel;
-import org.wso2.carbon.ml.core.spark.models.MLRandomForestModel;
+import org.wso2.carbon.ml.core.spark.models.*;
 import org.wso2.carbon.ml.core.spark.transformations.BasicEncoder;
+import org.wso2.carbon.ml.core.spark.transformations.Normalization;
+import org.wso2.carbon.ml.core.utils.DeeplearningModelUtils;
 import org.wso2.carbon.ml.core.utils.MLUtils;
+
+import water.fvec.Frame;
 
 /**
  * Predict using input data rows.
@@ -57,6 +59,9 @@ public class Predictor {
     private long id;
     private MLModel model;
     private List<Vector> dataToBePredicted;
+    // for K means anomaly detection
+    private double percentileValue;
+    private boolean skipDecoding;
 
     public Predictor(long modelId, MLModel mlModel, List<String[]> data) {
         id = modelId;
@@ -64,12 +69,20 @@ public class Predictor {
         dataToBePredicted = getVectors(data);
     }
 
+    public Predictor(long modelId, MLModel mlModel, List<String[]> data, double percentile, boolean skipDecoding) {
+        id = modelId;
+        model = mlModel;
+        dataToBePredicted = getVectors(data);
+        percentileValue = percentile;
+        this.skipDecoding = skipDecoding;
+    }
+
     public List<?> predict() throws MLModelHandlerException {
         String algorithmType = model.getAlgorithmClass();
         AlgorithmType type = AlgorithmType.getAlgorithmType(algorithmType);
 
         org.wso2.carbon.metrics.manager.Timer timer = getTimer(model.getAlgorithmName());
-        
+
         if (AlgorithmType.CLASSIFICATION == type) {
             SUPERVISED_ALGORITHM supervised_algorithm = SUPERVISED_ALGORITHM.valueOf(model.getAlgorithmName());
             List<Double> predictions = new ArrayList<Double>();
@@ -81,22 +94,22 @@ public class Predictor {
 
                     double predictedData = decisionTreeModel.predict(vector);
                     predictions.add(predictedData);
-                    
+
                     stopTimer(context);
                     if (log.isDebugEnabled()) {
-
                         log.debug("Predicted value before decoding: " + predictedData);
                     }
                 }
+
                 return decodePredictedValues(predictions);
-            case RANDOM_FOREST:
+            case RANDOM_FOREST_CLASSIFICATION:
                 RandomForestModel randomForestModel = ((MLRandomForestModel) model.getModel()).getModel();
                 for (Vector vector : dataToBePredicted) {
                     Context context = startTimer(timer);
-                    
+
                     double predictedData = randomForestModel.predict(vector);
                     predictions.add(predictedData);
-                    
+
                     stopTimer(context);
                     if (log.isDebugEnabled()) {
 
@@ -108,10 +121,10 @@ public class Predictor {
                 ClassificationModel classificationModel = ((MLClassificationModel) model.getModel()).getModel();
                 for (Vector vector : dataToBePredicted) {
                     Context context = startTimer(timer);
-                    
+
                     double predictedData = classificationModel.predict(vector);
                     predictions.add(predictedData);
-                    
+
                     stopTimer(context);
 
                     if (log.isDebugEnabled()) {
@@ -123,35 +136,17 @@ public class Predictor {
             }
 
         } else if (AlgorithmType.NUMERICAL_PREDICTION == type) {
-            GeneralizedLinearModel generalizedLinearModel = ((MLGeneralizedLinearModel) model.getModel()).getModel();
+            SUPERVISED_ALGORITHM supervised_algorithm = SUPERVISED_ALGORITHM.valueOf(model.getAlgorithmName());
             List<Double> predictions = new ArrayList<Double>();
-            for (Vector vector : dataToBePredicted) {
-                Context context = startTimer(timer);
-
-                double predictedData = generalizedLinearModel.predict(vector);
-                predictions.add(predictedData);
-                
-                stopTimer(context);
-                
-                if (log.isDebugEnabled()) {
-
-                    log.debug("Predicted value before decoding: " + predictedData);
-                }
-            }
-            return decodePredictedValues(predictions);
-
-        } else if (AlgorithmType.CLUSTERING == type) {
-            UNSUPERVISED_ALGORITHM unsupervised_algorithm = UNSUPERVISED_ALGORITHM.valueOf(model.getAlgorithmName());
-            switch (unsupervised_algorithm) {
-            case K_MEANS:
-                List<Integer> predictions = new ArrayList<Integer>();
-                KMeansModel kMeansModel = (KMeansModel) model.getModel();
+            switch (supervised_algorithm) {
+            case RANDOM_FOREST_REGRESSION:
+                RandomForestModel randomForestModel = ((MLRandomForestModel) model.getModel()).getModel();
                 for (Vector vector : dataToBePredicted) {
                     Context context = startTimer(timer);
 
-                    int predictedData = kMeansModel.predict(vector);
+                    double predictedData = randomForestModel.predict(vector);
                     predictions.add(predictedData);
-                    
+
                     stopTimer(context);
                     if (log.isDebugEnabled()) {
 
@@ -160,12 +155,132 @@ public class Predictor {
                 }
                 return decodePredictedValues(predictions);
             default:
-                throw new AlgorithmNameException("Incorrect algorithm name: " + model.getAlgorithmName()
-                        + " for model id: " + id);
+                // Otherwise it is a linear model
+                GeneralizedLinearModel generalizedLinearModel = ((MLGeneralizedLinearModel) model.getModel())
+                        .getModel();
+                for (Vector vector : dataToBePredicted) {
+                    Context context = startTimer(timer);
+
+                    double predictedData = generalizedLinearModel.predict(vector);
+                    predictions.add(predictedData);
+
+                    stopTimer(context);
+
+                    if (log.isDebugEnabled()) {
+
+                        log.debug("Predicted value before decoding: " + predictedData);
+                    }
+                }
+                return decodePredictedValues(predictions);
+            }      
+
+        } else if (AlgorithmType.CLUSTERING == type) {
+            UNSUPERVISED_ALGORITHM unsupervised_algorithm = UNSUPERVISED_ALGORITHM.valueOf(model.getAlgorithmName());
+            switch (unsupervised_algorithm) {
+            case K_MEANS:
+                List<Integer> predictions = new ArrayList<Integer>();
+                KMeansModel kMeansModel = ((MLKMeansModel) model.getModel()).getModel();
+                for (Vector vector : dataToBePredicted) {
+                    Context context = startTimer(timer);
+
+                    int predictedData = kMeansModel.predict(vector);
+                    predictions.add(predictedData);
+
+                    stopTimer(context);
+
+                    if (log.isDebugEnabled()) {
+
+                        log.debug("Predicted value before decoding: " + predictedData);
+                    }
+                }
+                return decodePredictedValues(predictions);
+            default:
+                throw new AlgorithmNameException(
+                        "Incorrect algorithm name: " + model.getAlgorithmName() + " for model id: " + id);
+            }
+        } else if (AlgorithmType.ANOMALY_DETECTION == type) {
+            ANOMALY_DETECTION_ALGORITHM anomaly_detection_algorithm = ANOMALY_DETECTION_ALGORITHM
+                    .valueOf(model.getAlgorithmName());
+            switch (anomaly_detection_algorithm) {
+            case K_MEANS_ANOMALY_DETECTION_WITH_UNLABELED_DATA:
+            case K_MEANS_ANOMALY_DETECTION_WITH_LABELED_DATA:
+
+                List<String> predictions = new ArrayList<String>();
+                MLAnomalyDetectionModel mLAnomalyDetectionModel = (MLAnomalyDetectionModel) model.getModel();
+
+                Normalization normalization = null;
+                if (model.getNormalization()) {
+                    normalization = new Normalization.Builder()
+                            .minMax(model.getFeatures(), model.getSummaryStatsOfFeatures()).build();
+                }
+
+                for (Vector vector : dataToBePredicted) {
+
+                    Context context = startTimer(timer);
+
+                    if (model.getNormalization()) {
+                        double[] data = vector.toArray();
+                        double[] normalizedData;
+
+                        try {
+                            normalizedData = normalization.call(data);
+                        } catch (MLModelBuilderException e) {
+                            log.warn("Data normalization failed for data: " + Arrays.toString(data) + " Cause: "
+                                    + e.getMessage());
+                            normalizedData = data;
+                        }
+                        vector = new DenseVector(normalizedData);
+                    }
+
+                    String predictedValue = mLAnomalyDetectionModel.getModel().predict(vector, percentileValue);
+                    predictions.add(predictedValue);
+
+                    stopTimer(context);
+                    if (log.isDebugEnabled()) {
+
+                        log.debug("Predicted value before decoding: " + predictedValue);
+                    }
+                }
+                return predictions;
+            default:
+                throw new AlgorithmNameException(
+                        "Incorrect algorithm name: " + model.getAlgorithmName() + " for model id: " + id);
+            }
+        } else if (AlgorithmType.DEEPLEARNING == type) {
+            DEEPLEARNING_ALGORITHM deeplearning_algorithm = DEEPLEARNING_ALGORITHM.valueOf(model.getAlgorithmName());
+            switch (deeplearning_algorithm) {
+            case STACKED_AUTOENCODERS:
+                List<Double> predictions = new ArrayList<Double>();
+                MLDeeplearningModel saeModel = ((MLDeeplearningModel) model.getModel());
+                List<double[]> tobePredictedList = new ArrayList<double[]>();
+                for (Vector vector : dataToBePredicted) {
+                    tobePredictedList.add(vector.toArray());
+                }
+                int numberOfFeatures = model.getFeatures().size();
+                List<Feature> features = model.getFeatures();
+                String[] names = new String[numberOfFeatures];
+                for (int i = 0; i < numberOfFeatures; i++) {
+                    names[i] = features.get(i).getName();
+                }
+                Frame predFrame = DeeplearningModelUtils.doubleArrayListToFrame(names, tobePredictedList);
+
+                Context context = startTimer(timer);
+
+                double[] predictedData = saeModel.predict(predFrame);
+
+                for (double pVal : predictedData) {
+                    predictions.add((Double) pVal);
+                }
+
+                stopTimer(context);
+                return decodePredictedValues(predictions);
+            default:
+                throw new AlgorithmNameException(
+                        "Incorrect algorithm name: " + model.getAlgorithmName() + " for model id: " + id);
             }
         } else {
-            throw new MLModelHandlerException(String.format(
-                    "Failed to build the model [id] %s . Invalid algorithm type: %s", id, algorithmType));
+            throw new MLModelHandlerException(
+                    String.format("Failed to build the model [id] %s . Invalid algorithm type: %s", id, algorithmType));
         }
     }
 
@@ -183,9 +298,7 @@ public class Predictor {
     }
 
     private org.wso2.carbon.metrics.manager.Timer getTimer(String algorithmName) {
-
         try {
-
             org.wso2.carbon.metrics.manager.Timer timer = MetricManager.timer(Level.INFO,
                     "org.wso2.carbon.ml.prediction-time." + model.getAlgorithmName());
             return timer;
@@ -216,6 +329,10 @@ public class Predictor {
 
     // write a method to decode the predicted value
     private List<?> decodePredictedValues(List<?> predictions) {
+        // skip decoding, if asked
+        if (skipDecoding) {
+            return predictions;
+        }
         int index = model.getResponseIndex();
         if (index == -1) {
             return predictions;

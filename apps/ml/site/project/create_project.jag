@@ -11,9 +11,9 @@
     <script src="../../js/respond.min.js"></script> 
 
     <%
-        include("../../includes/tenantAware.jag");
-    %>
-    
+include("../../includes/tenantAware.jag");
+%>
+
 </head>
 
 <body>
@@ -22,13 +22,13 @@
 
 <!-- header -->
 <header>
-	<div class="row wr-global-header">
-	    <div class="col-sm-8 app-logo">
-	        <a href="../home/home.jag"><img src="../../images/logo.png" /><h2 class="app-title">Machine Learner</h2></a>
-	    </div>
-		<div class="col-sm-4">
-			<div class="wr-auth pull-right">
-				<a href="#" data-toggle="dropdown" class="cu-ico-right-button cu-ico-button-user"><% print(session.get("logged.user")); %></a>
+<div class="row wr-global-header">
+    <div class="col-sm-8 app-logo">
+        <a href="../home/home.jag"><img src="../../images/logo.png" /><h2 class="app-title">Machine Learner</h2></a>
+    </div>
+    <div class="col-sm-4">
+        <div class="wr-auth pull-right">
+            <a href="#" data-toggle="dropdown" class="cu-ico-right-button cu-ico-button-user"><% print(session.get("logged.user")); %></a>
 				<div class="dropdown-menu">
 					<div class="cu-arrow"></div>
 					<div class="dropdown-menu-content">
@@ -61,6 +61,7 @@
 				<a href="#" class="cu-btn btn-cancel" id="cancel-project">Cancel</a>
 			</div>
 		</div>
+	</div>
 
 		<div class="col-md-3">
 			<div class="wr-secondary-links pull-right">
@@ -110,7 +111,6 @@
 				</div>
 
 				<label class="input-label">Description<span class="help-tip glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="right" title="Description on this project."></span></label>
-				<span class="fld-required">*</span>
 				<div class="input-control text">
 				    <textarea rows="3" id="project-description" name="project-description"></textarea>
 				    <span class="form-val-error" id="project-description-error"></span>
@@ -120,8 +120,9 @@
 				<span class="fld-required">*</span>
 				<div class="input-control text" data-role="input-control">
 					<select class="form-control" id="datasets">
-					  <option>Select.. </option>
+					  <option>Select..</option>
 					</select>
+				    <span class="form-val-error" id="dataset-selection-error"></span>
 	            </div>
 
 	            <div class="btn-group-actions">
@@ -178,7 +179,11 @@ $( document ).ready(function() {
     
     $(window).resize(function() {
         scrollVibrateFix();
-    });*/ 
+    });*/
+    // for tooltip
+    $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+    })
 
     $("[data-toggle=popover]").popover();
 
@@ -233,9 +238,9 @@ $( document ).ready(function() {
         var datasetName = $( "#datasets option:selected" ).text();
         
         var projectNameValidation = isValidProjectName(projectName);
-        var descriptionValidation = isValidDescription(projectDes);
+        var datasetValidation = isValidDataset(datasetName);
 
-        if(projectNameValidation && descriptionValidation){
+        if(projectNameValidation  && datasetValidation){
         	
         	var jsonData = '{"name":"' + projectName + '","description":"' + projectDes + '","datasetName":"' + datasetName + '"}';
 
@@ -255,6 +260,10 @@ $( document ).ready(function() {
 		}
 	});
 
+	$('#datasets').on('change',function(e){
+		$('#dataset-selection-error').empty();
+	});
+
 	function loadDatasets() {
 		$.ajax({
 			type: "GET",
@@ -268,7 +277,7 @@ $( document ).ready(function() {
 				});
 			},
 			error: function(res) {
-                var errorText = res.responseText
+                var errorText = res.responseText;
                 handleNotification(errorText, '#notification-area', 'warning');
 			}
 		});
@@ -280,7 +289,7 @@ $( document ).ready(function() {
             $('#project-name-error').text("* Project name is required.");
             return false;    
 		}
-		if(/^[a-zA-Z0-9---_]*$/.test(text) == false){
+		if(/^[a-zA-Z0-9\s---_]*$/.test(text) == false){
             $('#project-name-error').text('* Special characters are not allowed');
             $('#project-name').text('');
             return false;
@@ -292,12 +301,13 @@ $( document ).ready(function() {
 	    return true;
 	}
 
-	function isValidDescription(text){
-		if(text && text.length > 0){
+
+	function isValidDataset(text){
+		if(text && text.length > 0 && text != "Select.."){
 			return true;
 		}
-		$('#project-description-error').text('* Project description is required.');
-        return false;       
+		$('#dataset-selection-error').text('* Dataset is required.');
+        return false; 
 	}
 
 });

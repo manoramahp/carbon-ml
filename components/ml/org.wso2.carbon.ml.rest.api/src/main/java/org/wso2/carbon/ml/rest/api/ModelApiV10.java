@@ -19,14 +19,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.OPTIONS;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
@@ -45,6 +38,7 @@ import org.wso2.carbon.ml.commons.domain.ModelSummary;
 import org.wso2.carbon.ml.core.exceptions.MLModelBuilderException;
 import org.wso2.carbon.ml.core.exceptions.MLModelHandlerException;
 import org.wso2.carbon.ml.core.exceptions.MLModelPublisherException;
+import org.wso2.carbon.ml.core.exceptions.MLPmmlExportException;
 import org.wso2.carbon.ml.core.impl.MLModelHandler;
 import org.wso2.carbon.ml.core.utils.MLUtils;
 import org.wso2.carbon.ml.rest.api.model.MLErrorBean;
@@ -169,7 +163,7 @@ public class ModelApiV10 extends MLRestAPI {
         int tenantId = carbonContext.getTenantId();
         String userName = carbonContext.getUsername();
         try {
-            String registryPath = mlModelHandler.publishModel(tenantId, userName, modelId);
+            String registryPath = mlModelHandler.publishModel(tenantId, userName, modelId,MLModelHandler.Format.SERIALIZED);
             return Response.ok(new MLResponseBean(registryPath)).build();
         } catch (InvalidRequestException e) {
             String msg = MLUtils.getErrorMsg(String.format(
@@ -178,6 +172,20 @@ public class ModelApiV10 extends MLRestAPI {
             logger.error(msg, e);
             return Response.status(Response.Status.BAD_REQUEST).entity(new MLErrorBean(e.getMessage())).build();
         } catch (MLModelPublisherException e) {
+            String msg = MLUtils.getErrorMsg(String.format(
+                    "Error occurred while publishing the model [id] %s of tenant [id] %s and [user] %s .", modelId,
+                    tenantId, userName), e);
+            logger.error(msg, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
+                    .build();
+        } catch (MLModelHandlerException e) {
+            String msg = MLUtils.getErrorMsg(String.format(
+                    "Error occurred while publishing the model [id] %s of tenant [id] %s and [user] %s .", modelId,
+                    tenantId, userName), e);
+            logger.error(msg, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
+                    .build();
+        } catch (MLPmmlExportException e) {
             String msg = MLUtils.getErrorMsg(String.format(
                     "Error occurred while publishing the model [id] %s of tenant [id] %s and [user] %s .", modelId,
                     tenantId, userName), e);
@@ -199,7 +207,7 @@ public class ModelApiV10 extends MLRestAPI {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response predict(@Multipart("modelId") long modelId, @Multipart("dataFormat") String dataFormat,
-            @Multipart("file") InputStream inputStream) {
+                            @Multipart("file") InputStream inputStream) {
         PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
         int tenantId = carbonContext.getTenantId();
         String userName = carbonContext.getUsername();
@@ -222,12 +230,12 @@ public class ModelApiV10 extends MLRestAPI {
             logger.error(msg, e);
             return Response.status(Response.Status.BAD_REQUEST).entity(new MLErrorBean(e.getMessage())).build();
         } catch (MLModelHandlerException e) {
-            String msg = MLUtils.getErrorMsg(String.format(
-                    "Error occurred while predicting from model [id] %s of tenant [id] %s and [user] %s.", modelId,
-                    tenantId, userName), e);
+            String msg = MLUtils.getErrorMsg(
+                    String.format("Error occurred while predicting from model [id] %s of tenant [id] %s and [user] %s.",
+                                  modelId, tenantId, userName), e);
             logger.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
-                    .build();
+                           .build();
         }
     }
 
@@ -326,6 +334,29 @@ public class ModelApiV10 extends MLRestAPI {
      * @return JSON of {@link org.wso2.carbon.ml.commons.domain.MLModelData} object
      */
     @GET
+    @Path("/{modelId}/getRecommendations/{userId}/{noOfProducts}")
+    @Produces("application/json")
+    public Response getRecommendations(@PathParam("modelId") long modelId,
+                                       @PathParam("userId") int userId,
+                                       @PathParam("noOfProducts") int noOfProducts) {
+
+        PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+        int tenantId = carbonContext.getTenantId();
+        String userName = carbonContext.getUsername();
+        try {
+            List<?> recommendations =
+                    mlModelHandler.getProductRecommendations(tenantId, userName, modelId, userId, noOfProducts);
+            return Response.ok(recommendations).build();
+        } catch (MLModelHandlerException e) {
+            String msg = MLUtils.getErrorMsg(String.format("Error occurred while getting recommendations from model [id] %s of tenant [id] %s and [user] %s.",
+                                                     modelId, tenantId, userName), e);
+            logger.error(msg, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
+                           .build();
+        }
+    }
+
+    @GET
     @Path("/{modelName}")
     @Produces("application/json")
     public Response getModel(@PathParam("modelName") String modelName) {
@@ -384,12 +415,15 @@ public class ModelApiV10 extends MLRestAPI {
         String userName = carbonContext.getUsername();
         try {
             mlModelHandler.deleteModel(tenantId, userName, modelId);
+            auditLog.info(String.format("User [name] %s of tenant [id] %s deleted a model [id] %s ", userName,
+                    tenantId, modelId));
             return Response.ok().build();
         } catch (MLModelHandlerException e) {
             String msg = MLUtils.getErrorMsg(String.format(
                     "Error occurred while deleting a model [id] %s of tenant [id] %s and [user] %s .", modelId,
                     tenantId, userName), e);
             logger.error(msg, e);
+            auditLog.error(msg, e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new MLErrorBean(e.getMessage()))
                     .build();
         }

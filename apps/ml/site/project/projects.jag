@@ -9,26 +9,27 @@
     <link href="../../css/bootstrap.css" rel="stylesheet">
     <link href="../../css/custom.css" rel="stylesheet">
     <link href="../../css/custom-theme.css" rel="stylesheet">
+    <link href="../../css/font-wso2.css" rel="stylesheet">
     <script src="../../js/respond.min.js"></script>
 
     <%
-        include("../../includes/tenantAware.jag");
-    %>
-    
+include("../../includes/tenantAware.jag");
+%>
+
 </head>
 
 <body>
 
-    <div class="container col-lg-12 col-md-12 col-sm-12">
+<div class="container col-lg-12 col-md-12 col-sm-12">
 
-        <header>
-            <div class="row wr-global-header">
-                <div class="col-sm-8 app-logo">
-                    <a href="../home/home.jag"><img src="../../images/logo.png" /><h2 class="app-title">Machine Learner</h2></a>
-                </div>
-                <div class="col-sm-4">
-                    <div class="wr-auth pull-right">
-                        <a href="#" data-toggle="dropdown" class="cu-ico-right-button cu-ico-button-user"><% print(session.get("logged.user")); %></a>
+    <header>
+        <div class="row wr-global-header">
+            <div class="col-sm-8 app-logo">
+                <a href="../home/home.jag"><img src="../../images/logo.png" /><h2 class="app-title">Machine Learner</h2></a>
+            </div>
+            <div class="col-sm-4">
+                <div class="wr-auth pull-right">
+                    <a href="#" data-toggle="dropdown" class="cu-ico-right-button cu-ico-button-user"><% print(session.get("logged.user")); %></a>
                         <div class="dropdown-menu">
                             <div class="cu-arrow"></div>
                             <div class="dropdown-menu-content">
@@ -98,6 +99,13 @@
 
                     <!-- delete project popup -->
                     <div class="popup-content" data-operation="delete-project">
+                    	<div  id="back-delete-project" align="left">
+                            <span style="cursor:pointer"class="fw-stack">
+                                <i class="fw fw-ring fw-stack-2x"></i>
+                                <i class="fw fw-left-arrow fw-stack-1x"></i>
+                            </span>
+                            <span style="cursor:pointer">GO BACK</span>
+                        </div>    
                         <div class="content">Are you sure you want to delete this project?</div>
                         <div class="buttons">
                             <a id="delete-project-yes" href="#" class="btn-opr-default">Yes</a>
@@ -108,6 +116,13 @@
 
                     <!-- delete analysis popup -->
                     <div class="popup-content" data-operation="delete-analysis">
+                    	<div  id="back-delete-analysis" align="left">
+                            <span style="cursor:pointer"class="fw-stack">
+                                <i class="fw fw-ring fw-stack-2x"></i>
+                                <i class="fw fw-left-arrow fw-stack-1x"></i>
+                            </span>
+                            <span style="cursor:pointer">GO BACK</span>
+                        </div> 
                         <div class="content">Are you sure you want to delete this analysis?</div>
                         <div class="buttons">
                             <a id="delete-analysis-yes" href="#" class="btn-opr-default">Yes</a>
@@ -136,8 +151,8 @@
 
 <div id="content-asset-types" style="display: none">
     <div>
+        <a class="ast-type-item" href="../data/datasets.jag"><img src="../../images/icons/ico-datasets.png" /><span>Datasets</span></a>
         <a class="ast-type-item" href="../project/projects.jag"><img src="../../images/icons/ico-projects.png" /><span>Projects</span></a>
-        <a class="ast-type-item" href="../data/datasets.jag"><img src="../../images/icons/ico-datasets.png" /><span>Datasets</span></a>   
     </div>
 </div>  
 
@@ -173,7 +188,11 @@
         
         $(window).resize(function() {
             scrollVibrateFix();
-        });*/     
+        });*/
+         // for tooltip
+        $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+        })
 
         $("[data-toggle=popover]").popover();
 
@@ -185,11 +204,12 @@
         });
 
         // load datasets into the search box
-	    loadDatasetsIntoSearchBox();
+        loadDatasetsIntoSearchBox();
 
         // load projects and analyses to accordion
         loadProjects();
-
+        
+       
         /********** event binding **********/
 
         // events to delete a project
@@ -335,7 +355,7 @@
         // compares models
         $(document).on('click', '#compare-models', function(e){ 
             e.preventDefault();
-            
+               
             var projectId = $(this).data('projectid');
             var projectName = $(this).data('projectname');
             var dataseId = $(this).data('dataseid');            
@@ -343,21 +363,27 @@
             window.location.href = 'compare.jag?projectId=' + projectId + '&projectName=' + projectName + '&dataseId=' + dataseId;
         });
 
+        $(document).on('click','#back-delete-project, #back-delete-analysis',function(e){
+        	e.preventDefault();
+
+        	hidePopup();
+        });
+
         /********** event binding **********/
     });
 
     // Analysis name input validation
     function isValidAnalysisName(text, notificationArea) {
-        if (!text || /^[a-zA-Z0-9---_]*$/.test(text) == false) {
-            var errorText = 'Empty names, special and space characters are not allowed.';
+        if (!text || /^[a-zA-Z0-9\s---_]*$/.test(text) == false) {
+            var errorText = 'Empty names and special characters are not allowed.';
             handleNotification(errorText, notificationArea, 'warning');
             return false;
         }
         if(text.length > 100) {
-	        var errorText = 'Analysis name is too long. Max 100 characters allowed.';
+            var errorText = 'Analysis name is too long. Max 100 characters allowed.';
             handleNotification(errorText, notificationArea, 'warning');
             return false;
-	    }
+        }
         return true;
     }
     
@@ -402,7 +428,7 @@
                                 '<input type="text" value="" class="analysis-name f-input-w-md" placeholder="e.g. myanalysis"/>' +
                             '</td>' +
                             '<td>' +
-                                '<a data-datasetid="' + datasetId + '" data-projectname="' + projectName + '" data-projectid="' + projectId + '"href="#" id="create-analysis" class="create-analysis cu-level2-btn btn-add-new-dark" data-toggle="tooltip" data-original-title="Create Analysis"><span>Create Analysis</span></a> '+
+                                '<a data-datasetid="' + datasetId + '" data-projectname="' + projectName + '" data-projectid="' + projectId + '"href="#" id="create-analysis" class="create-analysis cu-level2-btn btn-add-new-dark" data-toggle="tooltip" data-original-title="Create a new analysis"><span>Create Analysis</span></a> '+
                             '</td>' +
                         '</tr>' +
                     '</table>' +
@@ -412,71 +438,81 @@
     }
 
     function loadDatasetsIntoSearchBox() {
-    	$.ajax({
+        $.ajax({
                 type: "GET",
                 url: serverUrl + "/api/datasets",
                 success: function(data) {
                     var options = '<option></option>';
                     for (var i = 0; i < data.length; i++) {
-                    	var datasetName = data[i]['name'];
-                    	options += '<option value="' + datasetName + '">' + datasetName + '</option>';
+                        var datasetName = data[i]['name'];
+                        options += '<option value="' + datasetName + '">' + datasetName + '</option>';
                     }
-    		        $('#search').empty();
+                    $('#search').empty();
                     $('#search').append('<select class="search-projects col-md-2">' + options + '</select>');
                     $(".search-projects").select2({
                         placeholder: "Select a dataset",
-    			        allowClear: true
-            	    });
-    		        $(".search-projects").on("change", function(e) {loadProjectsOfDataset($(".search-projects").val());});
-    	    },
-    	        error: function(res) {
+                        allowClear: true
+                    });
+                    $(".search-projects").on("change", function(e) {loadProjectsOfDataset($(".search-projects").val());});
+            },
+                error: function(res) {
                     var errorText = JSON.parse(res.responseText)["exception"];
                     handleNotification(errorText, '#notification-area', 'warning');
                 }
-    	});
+        });
     }
 
     function loadProjects() {
-	    loadProjectsOfDataset('');
+        loadProjectsOfDataset('');
     }
 
     function loadProjectsOfDataset(datasetName) {
+        var noOfDatasets = getAvailableDatasetCount();
+        var title="";
+        if(noOfDatasets == 0){
+            title= "No datasets available to create a project";
+        }
         $.ajax({
             type: "GET",
             url: serverUrl + "/api/projects/analyses?datasetName=" + datasetName,
+            async:false,
             success: function(data) {
                 var tenantProjects = data;
-
                 if (tenantProjects.length == 0) {
                     var accordionPanelNoProjects = '';
-        		    if (datasetName.length == 0) {
-        		    	accordionPanelNoProjects = '<div class="ctrl-info-panel col-md-12 col-centered">'+
+                    if (datasetName.length == 0) {
+                        accordionPanelNoProjects = '<div class="ctrl-info-panel col-md-12 col-centered">'+
                                 '<h2>You do not have any projects created at the moment.</h2>'+
-                                '<p><a href="create_project.jag" class="cu-level2-btn btn-add-new-dark" data-toggle="tooltip" data-original-title="Create Project"><span>Create Project</span></a></p>'+
+                                '<div style="display:inline-flex"  data-toggle="tooltip" title="'+title+'">'+
+                                    '<p><a href="create_project.jag" class="cu-level2-btn btn-add-new-dark ' + appendCreateprojectDisabled(noOfDatasets) + '" data-toggle="tooltip" data-original-title="Create a new project"><span>Create Project</span></a></p>'+
+                                '</div>'+
                             '</div>';
-        		    } else {
-        			    accordionPanelNoProjects = '<div class="ctrl-info-panel col-md-12 col-centered">'+
+
+                    } else {
+                        accordionPanelNoProjects = '<div class="ctrl-info-panel col-md-12 col-centered">'+
                                 '<h2>You do not have any projects created for dataset [' + datasetName + '] at the moment.</h2>'+
-                                '<p><a href="create_project.jag?datasetName=' + datasetName + '" class="cu-level2-btn btn-add-new-dark" data-toggle="tooltip" data-original-title="Create Project"><span>Create Project</span></a></p>'+
+                                '<p><a href="create_project.jag?datasetName=' + datasetName + '" class="cu-level2-btn btn-add-new-dark" data-toggle="tooltip" title="hello" data-original-title="Create a new project"><span>Create Project</span></a></p>'+
                             '</div>';
-        		    } 
+                    } 
                     $('#accordion').empty();
                     $("#accordion").append(accordionPanelNoProjects);    
                 }
                 else {
 
-        		    var createProject = '';
-        		    if (datasetName.length == 0) {
-        			createProject = '' +
+                    var createProject = '';
+                    if (datasetName.length == 0) {
+                    createProject = '' +
                             '<div class="ctrl-info-panel col-md-12 col-centered">'+
-                                '<p><a href="create_project.jag" class="cu-level2-btn btn-add-new-dark" data-toggle="tooltip" data-original-title="Create Project"><span>Create Project</span></a></p>'+
+                            '<div style="display:inline-flex"  data-toggle="tooltip" title="'+title+'">'+
+                                '<p><a href="create_project.jag" class="cu-level2-btn btn-add-new-dark ' + appendCreateprojectDisabled(noOfDatasets) + '" data-toggle="tooltip"  data-original-title="Create a new project"><span>Create Project</span></a></p>'+
+                            '</div>'+
                             '</div>';
-        		    } else {
-        			createProject = '' +
+                    } else {
+                    createProject = '' +
                             '<div class="ctrl-info-panel col-md-12 col-centered">'+
-                                '<p><a href="create_project.jag?datasetName=' + datasetName + '" class="cu-level2-btn btn-add-new-dark" data-toggle="tooltip" data-original-title="Create Project"><span>Create Project</span></a></p>'+
-                            '</div>';	
-        		    }
+                                '<p><a href="create_project.jag?datasetName=' + datasetName + '" class="cu-level2-btn btn-add-new-dark" data-toggle="tooltip" data-original-title="Create a new project"><span>Create Project</span></a></p>'+
+                            '</div>';   
+                    }
 
                     $('#accordion').empty();
                     $("#accordion").append(createProject);                        
@@ -500,7 +536,9 @@
                         var description = sanitize(tenantProjects[i]['description']);                        
                         var createdTime = sanitize(tenantProjects[i]['createdTime']);                        
                         var datasetId = sanitize(tenantProjects[i]['datasetId']);
-                        var datasetStatus = sanitize(tenantProjects[i]['datasetStatus']);                        
+                        var datasetStatus = sanitize(tenantProjects[i]['datasetStatus']); 
+
+                        var noOfCompleteModels = getCompleteModelsCount(projectId);                       
 
                         accordionPanel = '' + 
                             '<div class="panel panel-default">' +
@@ -517,7 +555,7 @@
                                                 '</td>' +
                                                 '<td class="c-right">' +
                                                     '<div>' +
-                                                        '<a href="#" data-projectid="' + projectId + '" data-projectname="' + projectName + '" data-dataseid="' + datasetId + '" id="compare-models" class="cu-reg-btn btn-compare ' + appendDisabled(noOfAnalyses) + '" data-toggle="tooltip" data-original-title="Compare models in this project"><span>Compare models</span></a>' +
+                                                        '<a href="#" data-projectid="' + projectId + '" data-projectname="' + projectName + '" data-dataseid="' + datasetId + '" id="compare-models" class="cu-reg-btn btn-compare ' + appendDisabled(noOfAnalyses) + ' ' +appendCompareModelsDisabled(noOfCompleteModels)+ ' " data-toggle="tooltip" data-original-title="Compare models of this project"><span>Compare models</span></a>' +
                                                         '<a href="#" data-projectid="' + projectId + '" id="delete-project" class="cu-reg-btn btn-delete">Delete Project</a>' +
                                                     '</div>' +
                                                 '</td>' +
@@ -526,7 +564,7 @@
                                     '</h4>' +
                                 '</div>' +
                                 // first panel will be expanded on page load                                
-                                '<div id="collapse' + i + '" class="panel-collapse collapse ' + appendCollapse(i) + '" role="tabpanel" aria-labelledby="heading'+i+'">'+
+                                '<div id="collapse' + i + '" class="panel-collapse collapse ' + appendCollapse(i) + ' '+ appendNavigation(projectName)+' " role="tabpanel" aria-labelledby="heading'+i+'">'+
                                     '<div class="panel-body">';
                                 if (noOfAnalyses == 0) {
                                     accordionPanel += buildEmptyProjectDisplay(description, projectId, projectName, datasetId, datasetStatus);
@@ -564,8 +602,8 @@
                                                                 '<td class="c-padd"><span class="t-proj-workflow"><span class="glyphicon glyphicon-book"></span>&nbsp;&nbsp;'+analysisName+'</span>' +
                                                                 '</td>' +
                                                                 '<td>' +
-                                                                    '<a href="#" id="view-analysis" class="cu-level2-btn btn-view-dark" data-toggle="tooltip" data-original-title="View this model" data-analysisid="' + analysisId + '" data-projectid="' + projectId + '" data-projectname="' + projectName + '" data-analysisname="' + analysisName + '" data-datasetid="' + datasetId + '"><span>View</span></a>' +
-                                                                    '<a href="#" id="view-models" class="cu-level2-btn btn-view-models-dark" data-toggle="tooltip" data-original-title="View this model" data-analysisid="' + analysisId + '" data-projectid="' + projectId + '" data-projectname="' + projectName + '" data-analysisname="' + analysisName + '" data-datasetid="' + datasetId + '"><span>Models</span></a>' +
+                                                                    '<a href="#" id="view-analysis" class="cu-level2-btn btn-view-dark" data-toggle="tooltip" data-original-title="View analysis configurations" data-analysisid="' + analysisId + '" data-projectid="' + projectId + '" data-projectname="' + projectName + '" data-analysisname="' + analysisName + '" data-datasetid="' + datasetId + '"><span>View</span></a>' +
+                                                                    '<a href="#" id="view-models" class="cu-level2-btn btn-view-models-dark" data-toggle="tooltip" data-original-title="View models" data-analysisid="' + analysisId + '" data-projectid="' + projectId + '" data-projectname="' + projectName + '" data-analysisname="' + analysisName + '" data-datasetid="' + datasetId + '"><span>Models</span></a>' +
                                                                     '<a href="#" id="delete-analysis" class="del-wf cu-level2-btn btn-delete-dark" data-analysisid="' + analysisId + '">Delete</a>' +
                                                                 '</td>' +
                                                             '</tr>';                                                                                                       
@@ -595,9 +633,27 @@
 
     // function to append button disabled CSS class when there are no analyses in a project
     function appendDisabled(noOfAnalyses) {
+
         var classAppend = '';
         if(noOfAnalyses == 0) {
             classAppend = 'btn-disabled';  
+        }
+        return classAppend;
+    }
+    // function to append button disabled CSS class when there are no complete models in a project
+    function appendCompareModelsDisabled(noOfCompleteModels) {
+        var classAppend = '';
+        if(noOfCompleteModels == 0) {
+            classAppend = 'btn-disabled';  
+        }
+        return classAppend;
+    }
+
+   // function to append button disabled CSS class when there are no datasets to create a project
+   function appendCreateprojectDisabled(noOfDatasets) {
+        var classAppend = '';
+        if(noOfDatasets == 0) {
+            classAppend = 'cu-level-btn-disabled';  
         }
         return classAppend;
     }
@@ -636,6 +692,19 @@
         }
     }
 
+    function appendNavigation(projectName){
+          // need for navigation
+        var queryParam = getParameterByName("projectName");
+
+        if(queryParam.length > 0 && projectName == queryParam){
+            $("#collapse0").removeClass('in');
+              return 'in';
+        }     
+        else{
+            return ' ';
+        }
+    }
+
     // deletes an analysis
     function deleteAnalysis(analysisId, notificationArea) {
         if(analysisId) {
@@ -663,6 +732,51 @@
         return notification;
     }
 
+    function getAvailableDatasetCount(){
+        var count;
+        $.ajax({
+            type: "GET",
+            url: serverUrl+"/api/datasets?status=Available",
+            async: false,
+            success: function(data) {
+                if(data.length == 0){              
+                    count =0;
+                }
+                else{
+                    count = data.length;
+                } 
+            },
+            error: function(res) {
+                var errorText = JSON.parse(res.responseText)["exception"];
+                handleNotification(errorText, '#notification-area', 'warning');
+            }
+
+
+        });
+        return count;
+    }   
+
+    function getCompleteModelsCount(projectId){
+         var count;
+         $.ajax({
+            type: "GET",
+            url: serverUrl+"/api/projects/"+projectId+"/models",
+            async: false,
+            success: function(data) {
+              if(data.length == 0){
+                count = 0;
+              }
+              else{
+                 count = data.length;
+              }               
+            },
+            error: function(res) {
+                var errorText = JSON.parse(res.responseText)["exception"];
+                handleNotification(errorText, '#notification-area', 'warning');
+            }
+        });
+        return count;
+    }
 </script>
 
 </body>
